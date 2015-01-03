@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- 
+     # launchctl load -w /Library/LaunchDaemons/io.github.4gra.fanspeed.plist
+     # launchctl start io.github.4gra.fanspeed
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.4gra.fanspeed</string>
+
+    <key>ProgramArguments</key>
+    <array>
+    <string>/usr/local/bin/fanspeed</string>
+    <string>update</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StartInterval</key>
+    <integer>30</integer>
+
+</dict>
+</plist>
+
