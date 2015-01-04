@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- 
+  Usage:
      # launchctl load -w /Library/LaunchDaemons/io.github.4gra.fanspeed.plist
      # launchctl start io.github.4gra.fanspeed
+
+  Copyright (C) 2015, https://github.com/4gra
+  This program comes with ABSOLUTELY NO WARRANTY; for details see included LICENCE.
+  This is free software, and you are welcome to redistribute it under certain
+  conditions; view the included file LICENCE for details.
 -->
 <plist version="1.0">
 <dict>

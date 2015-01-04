@@ -55,3 +55,10 @@ Suggested Improvements
    * Rewrite all in C based on ```smc``` code
    * Better logging
    * Locking
+
+LICENCE
+=======
+ Copyright (C) 2015, https://github.com/4gra
+ This program comes with ABSOLUTELY NO WARRANTY; for details see included LICENCE.
+ This is free software, and you are welcome to redistribute it under certain
+ conditions; view the included file LICENCE for details.
