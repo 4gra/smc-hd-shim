@@ -24,8 +24,9 @@ might be of wider use while there are still Macs with replaceable components.
 
 Limitations
 ===========
-Only checks key  ```Th0H```!  This thermal input may not even exist on your
-hardware.  Use the ```smc``` tool to check this assumption.  Doesn't take any
+Only checks key ```Th0H```!  This thermal input (CPU heatsink I think) may not
+even exist on your hardware.  Use the ```smc``` tool to check this assumption
+and work out which value or values are safe to use.  This tool doesn't take any
 other thermal input into account, and doesn't check HDD SMART info either.
 
 The decision to work off one input was checked carefully on my laptop at the
