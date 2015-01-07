@@ -1,0 +1,32 @@
+#!/usr/bin/env roundup
+# Uses roundup: http://bmizerany.github.io/roundup/
+describe "Fanspeed read-only operation tests (run as normal user before installing)"
+
+before() {
+    bin="./fanspeed"
+}
+
+it_can_be_found() {
+    ls ${bin}
+}
+
+it_displays_usage() {
+      usage=$(${bin} | head -n 1)
+        test "$usage" = "Usage: ${bin} [info|auto|set <RPM [RPM2]>|update|daemon]" || return 1
+      lines=$(${bin} | wc -l)
+        [[ "$lines" -eq 13 ]]
+}
+
+it_displays_info() {
+    ${bin} info | grep -e '^Fans:  [0-9]\{3,4\} [0-9]\{3,4\}$'
+    ${bin} info | grep -e '^Monitored temperature: [1-9][0-9]*$'
+    ${bin} info | grep -e '^Suggested speed: [0-9]\{3,4\}$'
+}
+
+it_attempts_update() {
+    [[ $UID == 0 ]] && { echo "This test will not run as root, for safety."; return 2; }
+    ${bin} update 2>&1 | grep -e '^Starting at.*$'
+    ${bin} update 2>&1 | grep -e '^Setting [0-9]\{3,4\} [0-9]\{3,4\}$'
+    errtext="Error: SMCWriteKey() = e00002c1"
+    [[ $( ${bin} update | grep -c "$errtext" ) -eq 2 ]]
+}

@@ -1,0 +1,24 @@
+#!/usr/bin/env roundup
+# Uses roundup: http://bmizerany.github.io/roundup/
+describe "Fanspeed installation tests (run as root, >30s after installation"
+
+before() {
+    service="io.github.4gra.fanspeed"
+    exp=$(echo $service|sed -e 's/\./\\./g')
+}
+
+it_is_registered() {
+    [[ $UID == 0 ]] || { echo "This test must be run as root; skipping"; return 2; }
+    launchctl list "${service}"
+}
+
+it_will_run() {
+    bin=$(it_is_registered | awk '/"Program"/{gsub(/[";]/,"",$3); print $3}')
+    test -n "${bin}"
+    ${bin} info
+}
+
+it_has_run_ok() {
+    [[ $UID == 0 ]] || { echo "This test must be run as root; skipping"; return 2; }
+    launchctl list | grep '^\(-\|[0-9]\+\)\W\+0\W\+\<'${exp}'\>$'
+}
