@@ -1,0 +1,146 @@
+#!/bin/bash
+# Set Mac fan speed according to CPU temperature. 
+# Use without arguments or see README for help.
+#
+# Copyright (C) 2015, https://github.com/4gra/smc-hd-shim
+# This program comes with ABSOLUTELY NO WARRANTY; for details see included LICENCE.
+# This is free software, and you are welcome to redistribute it under certain
+# conditions; view the included file LICENCE for details.
+#
+# I wrote this for my MacBookPro4,1; your mileage WILL vary on other hardware,
+# and might even vary on idential hardware depending on upgrades, load, etc. 
+#
+# Requires the smc tool:
+#   https://github.com/hholtmann/smcFanControl/tree/master/smc-command
+# Thrown together using awk, bc, cut, printf.  Could be improved.
+# What do you mean, "should've written it in C"?
+#
+# Essential reference:
+#   http://www.parhelia.ch/blog/statics/k3_keys.html
+#
+mode="$1"; shift
+smc="/usr/local/bin/smc"
+
+# Acceptable Min / Max values
+min=1440
+max=6000
+# Sleep timer - ONLY for test daemon mode.
+zzz=30
+# Fan formula.  Works for me.  No guarantees.  
+# Stays a little higher, and cooler, than firmware used to, on my MBP4,1.
+formula='(i^2)+(i*3)+350'
+
+# Set back to auto.
+function safemode() {
+    logger "Returning to automatic mode."
+    echo "Returning to automatic mode." >&2
+    $smc -k 'FS! ' -w 0000
+    exit 1
+}
+
+# IS fan speed forced?
+function is_forced() {
+    ${smc} -f | awk '
+        /^Total fans/{TOTAL=$5;}
+        /Mode *: *forced$/{FORCED++;}
+        END{if(FORCED==TOTAL && TOTAL>0){exit 0;}exit 1;}'
+    echo $?
+}
+
+# Convert to hex and shift as required by SMC
+function hexspeed() {
+    printf "%02x\n" $(( $1 << 2 ))
+}
+
+# Get the integer part of the temperature and convert to decimal degrees C.
+# If the output from smc changes, this WILL break, so I put in a basic sanity check.
+function dectemp() {
+    # note we're ignoring the low bits
+    temp=$($smc -k Th0H -r | cut -c 24,25)
+    dec=$((16#${temp}))
+    if [[ -n $dec && $dec -ge 0 ]]; then
+        echo $dec
+    else
+        logger "Couldn't read temperature."
+        echo "Couldn't read temperature." >&2
+        safemode
+        exit 1
+    fi
+}
+
+# Sets fans to the given speed(s).
+# $1: fan1, and fan2 if $2 is unset.
+# $2: fan2
+function setspeed() {
+    trap safemode ERR
+    # auto mode
+    if [[ $1 == 'auto' ]]; then
+        [[ $(is_forced) == 0 ]] && $smc -k 'FS! ' -w 0000
+        return 0
+    fi
+    # everything else:
+    [[ $2 -ne 0 ]] && s2=$2 || s2=$1
+    echo "Setting $1 $s2" >&2
+    fan1=$(hexspeed $1)
+    fan2=$(hexspeed $s2)
+    # Set the force bit if not already set. 
+    if [[ $(is_forced) != 0 ]]; then
+        $smc -k 'FS! ' -w 0003
+    fi
+    # TODO: check / fix errors from SMC, since it outputs 0 on failure :(
+    $smc -k F0Tg -w $fan1 
+    $smc -k F1Tg -w $fan2
+}
+
+# Calculate the speed and limit it.
+function calcspeed() {
+    ispd=$(echo "i=$(dectemp); $formula" | bc)
+    [[ $ispd -gt $max ]] && ispd=$max
+    [[ $ispd -lt $min ]] && ispd=$min
+    echo $ispd 
+}
+
+# Guess commandline intentions from this point on!
+if [[ $mode == 'update' ]]; then
+    echo "Starting at $(date)" >&2
+    setspeed $(calcspeed)
+
+elif [[ $mode == 'daemon' ]]; then
+    echo "Starting at $(date)" >&2
+    trap safemode QUIT 
+    while true; do
+        setspeed $(calcspeed)
+        sleep $zzz
+    done
+    exit 0
+
+elif [[ $mode == 'auto' ]]; then
+    setspeed auto
+    $smc -f
+
+elif [[ $mode == 'set' ]]; then
+    setspeed $(printf '%d' $1) $(printf '%d' $2)
+    $smc -f
+
+elif [[ $mode == 'info' ]]; then
+    $smc -f | awk 'BEGIN{printf("Fans: ");}/Actual/{printf $4" ";}END{print "";}'
+    echo "Monitored temperature: $(dectemp)"
+    echo "Suggested speed: $(calcspeed)"
+
+else
+    echo "Usage: $0 [info|auto|set <RPM [RPM2]>|update|daemon]"
+    echo "  See $0 source for details."
+    echo "  $0 info"
+    echo "    print some temperature / fan information"
+    echo "  $0 auto | set <RPM [RPM2]>"
+    echo "    sets / unsets fan speed using $smc"
+    echo "    auto: removes the force bit, allowing firmware (non-)control."
+    echo "  $0 update" 
+    echo "    sets fan speed automatically, once, and quit"
+    echo "    designed to be called by launchd on a schedule."
+    echo "  $0 daemon" 
+    echo "    sets fan speed automatically on a ${zzz} second loop"
+    echo "    for testing purposes only."
+    exit 1
+
+fi
